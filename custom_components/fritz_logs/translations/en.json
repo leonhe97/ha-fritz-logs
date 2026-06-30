@@ -13,7 +13,8 @@
       }
     },
     "error": {
-      "cannot_connect": "Cannot connect to Fritz!Box — check IP address and credentials."
+      "cannot_connect": "Cannot connect to Fritz!Box — check IP address.",
+      "invalid_auth": "Authentication failed — check username and password."
     },
     "abort": {
       "already_configured": "This Fritz!Box is already configured."

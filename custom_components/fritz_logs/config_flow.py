@@ -4,6 +4,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import callback
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import homeassistant.helpers.config_validation as cv
 
 from .const import (
@@ -15,14 +16,9 @@ from .const import (
     DEFAULT_USERNAME,
     DOMAIN,
 )
+from .fritz_session import FritzAuthError, FritzSession
 
 _LOGGER = logging.getLogger(__name__)
-
-
-def _test_connection(host: str, username: str, password: str, ssl: bool) -> None:
-    from fritzconnection.core.fritzconnection import FritzConnection
-    fc = FritzConnection(address=host, user=username, password=password, use_tls=ssl)
-    fc.call_action("DeviceInfo:1", "GetDeviceLog")
 
 
 class FritzLogsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -41,13 +37,15 @@ class FritzLogsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self._abort_if_unique_id_configured()
 
             try:
-                await self.hass.async_add_executor_job(
-                    _test_connection,
-                    user_input[CONF_HOST],
-                    user_input[CONF_USERNAME],
-                    user_input[CONF_PASSWORD],
-                    user_input[CONF_SSL],
+                fritz = FritzSession(
+                    host=user_input[CONF_HOST],
+                    username=user_input[CONF_USERNAME],
+                    password=user_input[CONF_PASSWORD],
+                    ssl=user_input[CONF_SSL],
                 )
+                await fritz.fetch_logs(async_get_clientsession(self.hass))
+            except FritzAuthError:
+                errors["base"] = "invalid_auth"
             except Exception as err:
                 _LOGGER.warning("Fritz!Box connection test failed for %s: %s", user_input[CONF_HOST], err)
                 errors["base"] = "cannot_connect"

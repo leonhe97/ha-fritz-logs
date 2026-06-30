@@ -1,28 +1,29 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta
+from datetime import timedelta
 
-from fritzconnection.core.fritzconnection import FritzConnection
-from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import CONF_POLL_INTERVAL, CONF_SSL, DEFAULT_POLL_INTERVAL, DOMAIN, EVENT_LOG_ENTRY
+from .const import (
+    CATEGORY_NAMES,
+    CONF_POLL_INTERVAL,
+    CONF_SSL,
+    DEFAULT_POLL_INTERVAL,
+    DOMAIN,
+    EVENT_LOG_ENTRY,
+)
+from .fritz_session import FritzAuthError, FritzSession
 
 _LOGGER = logging.getLogger(__name__)
 
 
-def _parse_log_line(line: str) -> dict:
-    parts = line.split(" ", 2)
-    if len(parts) == 3:
-        try:
-            dt = datetime.strptime(f"{parts[0]} {parts[1]}", "%d.%m.%y %H:%M:%S")
-            return {"message": parts[2], "timestamp": dt.isoformat(), "raw": line}
-        except ValueError:
-            pass
-    return {"message": line, "timestamp": None, "raw": line}
+def _entry_key(entry: dict) -> str:
+    return f"{entry.get('datetime', '')}|{entry.get('message', '')}"
 
 
 class FritzLogsCoordinator(DataUpdateCoordinator):
@@ -36,48 +37,55 @@ class FritzLogsCoordinator(DataUpdateCoordinator):
             name=DOMAIN,
             update_interval=timedelta(seconds=poll_interval),
         )
-        self._host: str = entry.data[CONF_HOST]
-        self._username: str = entry.data[CONF_USERNAME]
-        self._password: str = entry.data[CONF_PASSWORD]
-        self._ssl: bool = entry.data.get(CONF_SSL, False)
-        self._seen_lines: set[str] = set()
+        self._fritz = FritzSession(
+            host=entry.data[CONF_HOST],
+            username=entry.data[CONF_USERNAME],
+            password=entry.data[CONF_PASSWORD],
+            ssl=entry.data.get(CONF_SSL, False),
+        )
+        self._seen_keys: set[str] = set()
         self._initialized: bool = False
 
     async def _async_update_data(self) -> dict:
+        http = async_get_clientsession(self.hass)
         try:
-            raw: str = await self.hass.async_add_executor_job(self._fetch_log_text)
+            entries = await self._fritz.fetch_logs(http)
+        except FritzAuthError as err:
+            _LOGGER.error("Fritz!Box authentication failed: %s", err)
+            raise UpdateFailed(str(err)) from err
         except Exception as err:
-            _LOGGER.error("Fritz!Box log fetch failed for %s: %s", self._host, err)
+            _LOGGER.error("Fritz!Box log fetch failed: %s", err)
             raise UpdateFailed(f"Fritz!Box log fetch failed: {err}") from err
 
-        lines = [line.strip() for line in raw.splitlines() if line.strip()]
-        _LOGGER.debug("Fetched %d log lines from %s", len(lines), self._host)
+        _LOGGER.debug("Fetched %d log entries", len(entries))
 
         if not self._initialized:
-            self._seen_lines.update(lines)
+            self._seen_keys.update(_entry_key(e) for e in entries)
             self._initialized = True
-            _LOGGER.info("Fritz!Box Logs initialized — seeded %d existing entries, events start from next poll", len(lines))
-            return {"lines": lines}
+            _LOGGER.info(
+                "Fritz!Box Logs initialized — seeded %d existing entries, events start from next poll",
+                len(entries),
+            )
+            return {"entries": entries}
 
-        new_lines = [line for line in lines if line not in self._seen_lines]
-        _LOGGER.debug("Poll complete: %d new of %d total lines", len(new_lines), len(lines))
-        self._seen_lines.update(new_lines)
+        new_entries = [e for e in entries if _entry_key(e) not in self._seen_keys]
+        _LOGGER.debug("Poll complete: %d new of %d total entries", len(new_entries), len(entries))
+        self._seen_keys.update(_entry_key(e) for e in new_entries)
 
-        # Log is newest-first; fire events oldest-first
-        for line in reversed(new_lines):
-            self.hass.bus.async_fire(EVENT_LOG_ENTRY, _parse_log_line(line))
-            _LOGGER.info("fritz_logs_log_entry fired: %s", line)
+        # data.lua returns newest-first; fire events oldest-first
+        for entry in reversed(new_entries):
+            category = entry.get("category", 0)
+            payload = {
+                "message": entry["message"],
+                "datetime": entry.get("datetime", ""),
+                "category": category,
+                "category_name": CATEGORY_NAMES.get(category, "unknown"),
+            }
+            self.hass.bus.async_fire(EVENT_LOG_ENTRY, payload)
+            _LOGGER.info(
+                "fritz_logs_log_entry fired [%s]: %s",
+                payload["category_name"],
+                entry["message"],
+            )
 
-        return {"lines": lines}
-
-    def _fetch_log_text(self) -> str:
-        fc = FritzConnection(
-            address=self._host,
-            user=self._username,
-            password=self._password,
-            use_tls=self._ssl,
-        )
-        result = fc.call_action("DeviceInfo:1", "GetDeviceLog")
-        log_text = result.get("NewDeviceLog", "")
-        _LOGGER.debug("Raw Fritz!Box response: %d chars, first line: %s", len(log_text), log_text.splitlines()[0] if log_text else "<empty>")
-        return log_text
+        return {"entries": entries}
