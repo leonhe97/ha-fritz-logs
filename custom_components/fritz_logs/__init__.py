@@ -13,6 +13,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinator = FritzLogsCoordinator(hass, entry)
     await coordinator.async_config_entry_first_refresh()
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
+    # Coordinator only polls while it has listeners; add a no-op to keep it running
+    entry.async_on_unload(coordinator.async_add_listener(lambda: None))
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     return True
 
