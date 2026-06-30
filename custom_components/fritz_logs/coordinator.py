@@ -10,7 +10,6 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
-    CATEGORY_NAMES,
     CONF_CATEGORIES,
     CONF_POLL_INTERVAL,
     CONF_SSL,
@@ -76,24 +75,22 @@ class FritzLogsCoordinator(DataUpdateCoordinator):
         new_entries = [
             e for e in entries
             if _entry_key(e) not in self._seen_keys
-            and CATEGORY_NAMES.get(e.get("category", 0), "unknown") in self._selected
+            and e.get("category", "") in self._selected
         ]
         _LOGGER.debug("Poll complete: %d new of %d total entries", len(new_entries), len(entries))
         self._seen_keys.update(_entry_key(e) for e in new_entries)
 
         # data.lua returns newest-first; fire events oldest-first
         for entry in reversed(new_entries):
-            category = entry.get("category", 0)
             payload = {
                 "message": entry["message"],
                 "datetime": entry.get("datetime", ""),
-                "category": category,
-                "category_name": CATEGORY_NAMES.get(category, "unknown"),
+                "category": entry.get("category", ""),
             }
             self.hass.bus.async_fire(EVENT_LOG_ENTRY, payload)
             _LOGGER.info(
                 "fritz_logs_log_entry fired [%s]: %s",
-                payload["category_name"],
+                payload["category"],
                 entry["message"],
             )
 

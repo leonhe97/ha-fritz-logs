@@ -87,14 +87,13 @@ class FritzSession:
 
 def _parse_entry(entry: list | dict) -> dict:
     if isinstance(entry, list):
-        # Array format: [datetime_str, message, category_str, ...]
         return {
             "datetime": entry[0] if len(entry) > 0 else "",
             "message": entry[1] if len(entry) > 1 else "",
-            "category": int(entry[2]) if len(entry) > 2 and entry[2] else 0,
+            "category": str(entry[2]) if len(entry) > 2 else "",
         }
     return {
-        "datetime": entry.get("date", "") or entry.get("datetime", ""),
-        "message": entry.get("msg", "") or entry.get("message", ""),
-        "category": int(entry.get("category", entry.get("group", 0)) or 0),
+        "datetime": f"{entry.get('date', '')} {entry.get('time', '')}".strip(),
+        "message": entry.get("msg", ""),
+        "category": entry.get("group", ""),  # already a string: "sys", "net", "fon", "wlan", "usb"
     }

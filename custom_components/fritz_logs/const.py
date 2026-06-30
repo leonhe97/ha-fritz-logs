@@ -12,15 +12,6 @@ EVENT_LOG_ENTRY = f"{DOMAIN}_log_entry"
 
 CONF_CATEGORIES = "categories"
 
-# Best-guess mapping — actual values confirmed from debug logs
-CATEGORY_NAMES: dict[int, str] = {
-    1: "sys",
-    2: "net",
-    3: "fon",
-    4: "wlan",
-    5: "usb",
-}
-
 CATEGORY_LABELS: dict[str, str] = {
     "sys": "System",
     "net": "Internet",
