@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/leonhe97/ha-fritz-logs/compare/v0.4.0...v0.4.1) (2026-06-30)
+
+
+### Bug Fixes
+
+* parse group as string, split date/time fields ([cb4ea77](https://github.com/leonhe97/ha-fritz-logs/commit/cb4ea7725681a67a8f55943f29f6949060d5de8a))
+
 ## [0.4.0](https://github.com/leonhe97/ha-fritz-logs/compare/v0.3.0...v0.4.0) (2026-06-30)
 
 
