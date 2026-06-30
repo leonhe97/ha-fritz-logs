@@ -1,7 +1,7 @@
 {
   "domain": "fritz_logs",
   "name": "Fritz!Box Logs",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "documentation": "",
   "requirements": [],
   "config_flow": true,

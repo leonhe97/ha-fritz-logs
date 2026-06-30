@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/leonhe97/ha-fritz-logs/compare/v0.3.0...v0.4.0) (2026-06-30)
+
+
+### Features
+
+* add per-category filter; fix data.lua filter=all ([19efd0e](https://github.com/leonhe97/ha-fritz-logs/commit/19efd0ecc300783b0adc331458f57afc9a5d2b8d))
+
 ## [0.3.0](https://github.com/leonhe97/ha-fritz-logs/compare/v0.2.1...v0.3.0) (2026-06-30)
 
 
