@@ -1,0 +1,12 @@
+{
+  "domain": "fritz_logs",
+  "name": "Fritz!Box Logs",
+  "version": "0.1.0",
+  "documentation": "",
+  "requirements": [
+    "fritzconnection>=1.10.0"
+  ],
+  "config_flow": true,
+  "codeowners": [],
+  "iot_class": "local_polling"
+}

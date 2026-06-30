@@ -1,0 +1,32 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Fritz!Box",
+        "data": {
+          "host": "IP address",
+          "username": "Username (leave blank for default)",
+          "password": "Password",
+          "ssl": "Use HTTPS (port 49443)",
+          "poll_interval": "Poll interval (seconds)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot connect to Fritz!Box — check IP address and credentials."
+    },
+    "abort": {
+      "already_configured": "This Fritz!Box is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Fritz!Box Logs options",
+        "data": {
+          "poll_interval": "Poll interval (seconds)"
+        }
+      }
+    }
+  }
+}
