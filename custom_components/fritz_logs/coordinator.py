@@ -47,22 +47,26 @@ class FritzLogsCoordinator(DataUpdateCoordinator):
         try:
             raw: str = await self.hass.async_add_executor_job(self._fetch_log_text)
         except Exception as err:
+            _LOGGER.error("Fritz!Box log fetch failed for %s: %s", self._host, err)
             raise UpdateFailed(f"Fritz!Box log fetch failed: {err}") from err
 
         lines = [line.strip() for line in raw.splitlines() if line.strip()]
+        _LOGGER.debug("Fetched %d log lines from %s", len(lines), self._host)
 
         if not self._initialized:
             self._seen_lines.update(lines)
             self._initialized = True
+            _LOGGER.info("Fritz!Box Logs initialized — seeded %d existing entries, events start from next poll", len(lines))
             return {"lines": lines}
 
         new_lines = [line for line in lines if line not in self._seen_lines]
+        _LOGGER.debug("Poll complete: %d new of %d total lines", len(new_lines), len(lines))
         self._seen_lines.update(new_lines)
 
         # Log is newest-first; fire events oldest-first
         for line in reversed(new_lines):
             self.hass.bus.async_fire(EVENT_LOG_ENTRY, _parse_log_line(line))
-            _LOGGER.debug("New Fritz!Box log entry: %s", line)
+            _LOGGER.info("fritz_logs_log_entry fired: %s", line)
 
         return {"lines": lines}
 
@@ -74,4 +78,6 @@ class FritzLogsCoordinator(DataUpdateCoordinator):
             use_tls=self._ssl,
         )
         result = fc.call_action("DeviceInfo:1", "GetDeviceLog")
-        return result.get("NewDeviceLog", "")
+        log_text = result.get("NewDeviceLog", "")
+        _LOGGER.debug("Raw Fritz!Box response: %d chars, first line: %s", len(log_text), log_text.splitlines()[0] if log_text else "<empty>")
+        return log_text
