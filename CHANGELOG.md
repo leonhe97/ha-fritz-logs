@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/leonhe97/ha-fritz-logs/compare/v0.2.0...v0.2.1) (2026-06-30)
+
+
+### Bug Fixes
+
+* keep coordinator polling without entities ([716664e](https://github.com/leonhe97/ha-fritz-logs/commit/716664e826536c9d557920f83af94201d2849eb8))
+
 ## [0.2.0](https://github.com/leonhe97/ha-fritz-logs/compare/v0.1.0...v0.2.0) (2026-06-30)
 
 
