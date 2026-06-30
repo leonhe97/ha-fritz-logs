@@ -80,7 +80,7 @@ class FritzSession:
     async def _post_log(self, http: aiohttp.ClientSession) -> aiohttp.ClientResponse:
         return await http.post(
             f"{self._base_url}/data.lua",
-            data={"sid": self._sid, "page": "log", "lang": "de"},
+            data={"sid": self._sid, "page": "log", "lang": "de", "filter": "all"},
             ssl=self._ssl,
         )
 

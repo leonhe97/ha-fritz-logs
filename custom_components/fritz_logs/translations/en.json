@@ -8,7 +8,8 @@
           "username": "Username (leave blank for default)",
           "password": "Password",
           "ssl": "Use HTTPS (port 49443)",
-          "poll_interval": "Poll interval (seconds)"
+          "poll_interval": "Poll interval (seconds)",
+          "categories": "Log categories to monitor"
         }
       }
     },
@@ -25,7 +26,8 @@
       "init": {
         "title": "Fritz!Box Logs options",
         "data": {
-          "poll_interval": "Poll interval (seconds)"
+          "poll_interval": "Poll interval (seconds)",
+          "categories": "Log categories to monitor"
         }
       }
     }

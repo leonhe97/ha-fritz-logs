@@ -11,8 +11,10 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .const import (
     CATEGORY_NAMES,
+    CONF_CATEGORIES,
     CONF_POLL_INTERVAL,
     CONF_SSL,
+    DEFAULT_CATEGORIES,
     DEFAULT_POLL_INTERVAL,
     DOMAIN,
     EVENT_LOG_ENTRY,
@@ -43,6 +45,9 @@ class FritzLogsCoordinator(DataUpdateCoordinator):
             password=entry.data[CONF_PASSWORD],
             ssl=entry.data.get(CONF_SSL, False),
         )
+        self._selected: set[str] = set(
+            entry.options.get(CONF_CATEGORIES, entry.data.get(CONF_CATEGORIES, DEFAULT_CATEGORIES))
+        )
         self._seen_keys: set[str] = set()
         self._initialized: bool = False
 
@@ -68,7 +73,11 @@ class FritzLogsCoordinator(DataUpdateCoordinator):
             )
             return {"entries": entries}
 
-        new_entries = [e for e in entries if _entry_key(e) not in self._seen_keys]
+        new_entries = [
+            e for e in entries
+            if _entry_key(e) not in self._seen_keys
+            and CATEGORY_NAMES.get(e.get("category", 0), "unknown") in self._selected
+        ]
         _LOGGER.debug("Poll complete: %d new of %d total entries", len(new_entries), len(entries))
         self._seen_keys.update(_entry_key(e) for e in new_entries)
 

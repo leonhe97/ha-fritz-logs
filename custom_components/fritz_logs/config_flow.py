@@ -8,8 +8,11 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import homeassistant.helpers.config_validation as cv
 
 from .const import (
+    CATEGORY_LABELS,
+    CONF_CATEGORIES,
     CONF_POLL_INTERVAL,
     CONF_SSL,
+    DEFAULT_CATEGORIES,
     DEFAULT_HOST,
     DEFAULT_POLL_INTERVAL,
     DEFAULT_SSL,
@@ -66,6 +69,7 @@ class FritzLogsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Optional(CONF_POLL_INTERVAL, default=DEFAULT_POLL_INTERVAL): vol.All(
                     cv.positive_int, vol.Range(min=10, max=3600)
                 ),
+                vol.Optional(CONF_CATEGORIES, default=DEFAULT_CATEGORIES): cv.multi_select(CATEGORY_LABELS),
             }),
             errors=errors,
         )
@@ -83,6 +87,10 @@ class FritzLogsOptionsFlow(config_entries.OptionsFlow):
             CONF_POLL_INTERVAL,
             self._config_entry.data.get(CONF_POLL_INTERVAL, DEFAULT_POLL_INTERVAL),
         )
+        current_categories = self._config_entry.options.get(
+            CONF_CATEGORIES,
+            self._config_entry.data.get(CONF_CATEGORIES, DEFAULT_CATEGORIES),
+        )
 
         return self.async_show_form(
             step_id="init",
@@ -90,5 +98,6 @@ class FritzLogsOptionsFlow(config_entries.OptionsFlow):
                 vol.Optional(CONF_POLL_INTERVAL, default=current_interval): vol.All(
                     cv.positive_int, vol.Range(min=10, max=3600)
                 ),
+                vol.Optional(CONF_CATEGORIES, default=current_categories): cv.multi_select(CATEGORY_LABELS),
             }),
         )
