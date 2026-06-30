@@ -1,0 +1,13 @@
+# Changelog
+
+## [0.2.0](https://github.com/leonhe97/ha-fritz-logs/compare/v0.1.0...v0.2.0) (2026-06-30)
+
+
+### Features
+
+* initial Fritz!Box Logs HACS integration ([262a3d3](https://github.com/leonhe97/ha-fritz-logs/commit/262a3d3e5cc39ec2abd0c5db3442cfd426510739))
+
+
+### Bug Fixes
+
+* add logging ([3f4d56f](https://github.com/leonhe97/ha-fritz-logs/commit/3f4d56f7ff647946ceeec60aa40e9185421b061b))
