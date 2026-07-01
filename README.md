@@ -4,39 +4,75 @@ A Home Assistant custom integration that polls your Fritz!Box router for log ent
 
 ## Features
 
-- Polls Fritz!Box logs via TR-064 (no external cloud dependency)
-- Fires a `fritz_logs_log_entry` event for every new log line
-- Configurable poll interval (10–3600 seconds, default 30s)
+- Polls all Fritz!Box log categories (sys, net, fon, wlan, usb) via the Lua API
+- Fires a `fritz_logs_log_entry` event for every new log entry
+- Configurable poll interval (10–3600 seconds, default 30s) and per-category filter
 - Only new entries since the last poll fire events — no flood on startup or restart
-- Supports HTTP and HTTPS connections to the Fritz!Box
 
 ## Event payload
 
 ```yaml
 event_type: fritz_logs_log_entry
 data:
-  message: "IPv6 prefix renewed successfully."
-  timestamp: "2026-06-30T18:30:00"   # ISO 8601, null if unparseable
-  raw: "30.06.26 18:30:00 IPv6 prefix renewed successfully."
+  message: "Internetverbindung wurde erfolgreich hergestellt."
+  datetime: "01.07.26 08:15:00"
+  category: "net"   # one of: sys, net, fon, wlan, usb
 ```
 
-## Automation example
+## Testing
+
+In **Developer Tools → Events**, subscribe to `fritz_logs_log_entry` and click **Start listening** before the next poll cycle. Any new Fritz!Box log entry will appear here in real time.
+
+## Automation examples
+
+### Alert on failed login
 
 ```yaml
 automation:
-  - alias: "Alert on failed login to Fritz!Box"
+  - alias: "Fritz!Box: alert on failed login"
     trigger:
       - platform: event
         event_type: fritz_logs_log_entry
-        event_data:
-          # partial match is not supported natively; use a template trigger instead
     condition:
       - condition: template
-        value_template: "{{ 'login failed' in trigger.event.data.message | lower }}"
+        value_template: >
+          {{ 'anmeldung' in trigger.event.data.message | lower and
+             trigger.event.data.category == 'sys' }}
     action:
       - service: notify.mobile_app_phone
         data:
-          message: "Fritz!Box login attempt: {{ trigger.event.data.message }}"
+          message: "Fritz!Box login: {{ trigger.event.data.message }}"
+```
+
+### Cable internet — DS-Lite / AFTR error reconnect
+
+On DS-Lite connections (common with German cable ISPs), the Fritz!Box occasionally
+fails to resolve the AFTR tunnel endpoint and loses IPv4 connectivity. This automation
+triggers a reconnect automatically with a 1-hour cooldown to prevent reconnect loops.
+
+Requires the [Fritz!Box Tools](https://www.home-assistant.io/integrations/fritz/) integration.
+
+```yaml
+automation:
+  - alias: "Fritz!Box: reconnect on DS-Lite AFTR failure"
+    mode: single
+    trigger:
+      - platform: event
+        event_type: fritz_logs_log_entry
+    condition:
+      - condition: template
+        value_template: >
+          {{ trigger.event.data.message | regex_search('AFTR .* kann nicht aufgelöst werden') }}
+      - condition: template
+        value_template: >
+          {{ (now() - state_attr('automation.fritz_box_reconnect_on_ds_lite_aftr_failure', 'last_triggered')).total_seconds() > 3600
+             if state_attr('automation.fritz_box_reconnect_on_ds_lite_aftr_failure', 'last_triggered') else true }}
+    action:
+      - service: notify.mobile_app_phone
+        data:
+          title: "Fritz!Box: AFTR failure detected"
+          message: "Triggering reconnect — {{ trigger.event.data.datetime }}"
+      - service: fritz.reconnect
 ```
 
 ## Installation
@@ -58,8 +94,12 @@ Copy `custom_components/fritz_logs/` into your HA `config/custom_components/` di
 1. Go to **Settings → Devices & Services → Add Integration**
 2. Search for **Fritz!Box Logs**
 3. Enter your Fritz!Box IP (default `192.168.178.1`), username (often blank), and password
-4. Optionally enable HTTPS and adjust the poll interval
+4. Optionally adjust the poll interval and select which log categories to monitor
+
+## No entities
+
+This integration creates no entities. It works purely by firing events on the HA event bus — nothing will appear in your devices or entities list after setup. Use **Developer Tools → Events** to verify it's working (see Testing above).
 
 ## Credentials
 
-The integration uses TR-064 (`DeviceInfo:1 / GetDeviceLog`). Use the same password you use to log into the Fritz!Box web UI. The username field can usually be left blank; enter `admin` if blank does not work.
+The integration authenticates via the Fritz!Box Lua API (the same session mechanism the web UI uses). Use your admin password or a dedicated Fritz!Box service account (recommended). The username field can be left blank for the default admin account.
